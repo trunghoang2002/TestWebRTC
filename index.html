@@ -10,12 +10,19 @@
 </head>
 <body>
     <h3 id="my-peer">Your ID: </h3>
+    
     <video id="localStream" width="300" autoplay playsinline></video> <br/>
+
+    <!-- Dropdown chọn camera -->
+    <label for="camera-select">Chọn camera:</label>
+    <select id="camera-select"></select>
     <button id="start-camera">Bật Camera</button>
     <button id="stop-camera">Tắt Camera</button>
+
     <br/> <br/>
     <video id="remoteStream" width="300" autoplay playsinline></video>
     <br/> <br/>
+    
     <input type="text" id="remote-peer" placeholder="Enter remote peer id" />
     <button id="connect">Connect</button>
 </body>

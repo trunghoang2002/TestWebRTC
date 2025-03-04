@@ -1,19 +1,61 @@
 const socket = io('http://localhost:3000');
 let localStream = null;
+let selectedDeviceId = null; // ID của camera được chọn
 
-// Hàm lấy danh sách thiết bị camera
-async function getVideoDevices() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices.filter(device => device.kind === 'videoinput');
+// Lấy danh sách thiết bị camera và cập nhật dropdown
+async function loadCameraList() {
+    const videoDevices = await navigator.mediaDevices.enumerateDevices();
+    const cameraSelect = document.getElementById('camera-select');
+    cameraSelect.innerHTML = ""; // Xóa danh sách cũ
+
+    const cameras = videoDevices.filter(device => device.kind === 'videoinput');
+    if (cameras.length === 0) {
+        console.error("Không tìm thấy camera nào!");
+        return;
+    }
+
+    cameras.forEach((camera, index) => {
+        const option = document.createElement('option');
+        option.value = camera.deviceId;
+        option.text = camera.label || `Camera ${index + 1}`;
+        cameraSelect.appendChild(option);
+    });
+
+    // Chọn camera đầu tiên mặc định
+    selectedDeviceId = cameras[0].deviceId;
 }
 
-// Hàm mở camera
-async function openStream(deviceId) {
-    const config = { 
-        audio: false, 
-        video: { deviceId: deviceId ? { exact: deviceId } : undefined } 
-    };
-    return navigator.mediaDevices.getUserMedia(config);
+// Khi người dùng chọn camera, cập nhật selectedDeviceId
+document.getElementById('camera-select').addEventListener('change', function () {
+    selectedDeviceId = this.value;
+});
+
+// Mở camera với deviceId được chọn
+async function startCamera() {
+    if (!selectedDeviceId) {
+        console.error("Chưa chọn camera.");
+        return;
+    }
+
+    if (localStream) {
+        stopCamera(); // Tắt camera trước khi bật camera mới
+    }
+
+    localStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: selectedDeviceId } },
+        audio: false
+    });
+
+    playStream('localStream', localStream);
+}
+
+// Tắt camera
+function stopCamera() {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        document.getElementById('localStream').srcObject = null;
+        localStream = null;
+    }
 }
 
 // Phát stream lên video tag
@@ -23,25 +65,8 @@ function playStream(idVideoTag, stream) {
     video.play();
 }
 
-// Bật camera
-async function startCamera() {
-    const videoDevices = await getVideoDevices();
-    if (videoDevices.length > 0) {
-        const selectedDeviceId = videoDevices[0].deviceId;
-        localStream = await openStream(selectedDeviceId);
-        playStream('localStream', localStream);
-    } else {
-        console.error('Không tìm thấy camera nào.');
-    }
-}
-
-// Tắt camera
-function stopCamera() {
-    if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        document.getElementById('localStream').srcObject = null;
-    }
-}
+// Load danh sách camera khi trang tải
+loadCameraList();
 
 // Sự kiện bấm nút bật/tắt camera
 document.getElementById('start-camera').addEventListener('click', startCamera);

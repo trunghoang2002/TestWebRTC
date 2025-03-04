@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>WebRTC Video Call</title>
     <script src="jquery-3.2.1.js"></script>
     <script src="peerjs-1.5.4.min.js"></script>
+    <script src="socket.io-4.8.1.js"></script>
 </head>
 <body>
-    <h3 id="my-peer">Your id: </h3>
-    <video id="localStream" width="300" controls></video>
+    <h3 id="my-peer">Your ID: </h3>
+    <video id="localStream" width="300" autoplay playsinline></video> <br/>
+    <button id="start-camera">Bật Camera</button>
+    <button id="stop-camera">Tắt Camera</button>
     <br/> <br/>
-    <video id="remoteStream" width="300" controls></video>
+    <video id="remoteStream" width="300" autoplay playsinline></video>
     <br/> <br/>
     <input type="text" id="remote-peer" placeholder="Enter remote peer id" />
     <button id="connect">Connect</button>

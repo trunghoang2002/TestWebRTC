@@ -2,6 +2,9 @@ const socket = io('http://localhost:3000');
 let localStream = null;
 let selectedDeviceId = null; // ID của camera được chọn
 
+$('#notification-bar').hide();
+$('#main').hide();
+
 // Lấy danh sách thiết bị camera và cập nhật dropdown
 async function loadCameraList() {
     console.log("Đang lấy danh sách camera...");
@@ -131,6 +134,8 @@ peer.on('call', call => {
 // Nhận thông báo từ server
 socket.on('signup-success', () => {
     alert("Đăng kí thành công!");
+    $('#register').hide();
+    $('#main').show();
 });
 
 socket.on('signup-failed', () => {
@@ -138,7 +143,8 @@ socket.on('signup-failed', () => {
 });
 
 socket.on('new-user', user => {
-    
+    showNotification(user.username);
+    showTitleNotification(user.username);
 });
 
 socket.on('all-user', user => {
@@ -147,3 +153,21 @@ socket.on('all-user', user => {
         $('#listUser').append(`<li>${u.username} - ${u.peerId}</li>`);
     });
 });
+
+function showNotification(username) {
+    const bar = document.getElementById('notification-bar');
+    bar.textContent = `User mới đăng ký: ${username}`;
+    bar.style.display = "block";
+
+    setTimeout(() => {
+        bar.style.display = "none";
+    }, 3000); // Ẩn sau 3 giây
+}
+
+function showTitleNotification(username) {
+    document.title = `🔔 User mới: ${username}`;
+    
+    setTimeout(() => {
+        document.title = "Trang của bạn";  // Reset lại tiêu đề
+    }, 5000);
+}

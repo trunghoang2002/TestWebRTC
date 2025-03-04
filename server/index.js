@@ -23,7 +23,6 @@ io.on("connection", (socket) => {
     socket.emit("signup-success");
     socket.broadcast.emit("new-user", user);
     io.emit("all-user", arrUserInfos);
-
   });
 });
 

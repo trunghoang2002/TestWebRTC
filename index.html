@@ -9,31 +9,34 @@
     <script src="socket.io-4.8.1.js"></script>
 </head>
 <body>
-    <h3 id="my-peer">Your ID: </h3>
-    
-    <video id="localStream" width="300" autoplay playsinline></video> <br/>
+    <div id="register">
+        <input type="text" id="txtUsername" placeholder="Enter your username" />
+        <button id="signup">Sign up</button>
+    </div>
 
-    <!-- Dropdown chọn camera -->
-    <label for="camera-select">Chọn camera:</label>
-    <select id="camera-select"></select>
-    <button id="start-camera">Bật Camera</button>
-    <button id="stop-camera">Tắt Camera</button>
-    <br/> <br/>
-    <input type="text" id="txtUsername" placeholder="Enter your name" />
-    <button id="signup">Sign up</button>
+    <div id="main">
+        <h3 id="my-peer">Your ID: </h3>
+        <video id="localStream" width="300" autoplay playsinline></video> <br/>
 
-    <br/> <br/>
-    <video id="remoteStream" width="300" autoplay playsinline></video>
-    <br/> <br/>
-    
-    <input type="text" id="remote-peer" placeholder="Enter remote peer id" />
-    <button id="connect">Connect</button>
-    <br/> <br/>
+        <!-- Dropdown chọn camera -->
+        <label for="camera-select">Chọn camera:</label>
+        <select id="camera-select"></select>
+        <button id="start-camera">Bật Camera</button>
+        <button id="stop-camera">Tắt Camera</button>
+        <br/> <br/>
 
-    <!-- Hiển thị danh sách user online-->
-    <h3>Online Users:</h3>
-    <ul id="listUser"></ul>
+        <video id="remoteStream" width="300" autoplay playsinline></video>
+        <br/> <br/>
+        <input type="text" id="remote-peer" placeholder="Enter remote peer id" />
+        <button id="connect">Connect</button>
+        <br/> <br/>
 
+        <!-- Hiển thị danh sách user online-->
+        <h3>Online Users:</h3>
+        <ul id="listUser"></ul>
+        <div id="notification-bar" style="position: fixed; top: 10px; right: 10px; background: #4CAF50; color: white; padding: 10px; border-radius: 5px; display: none;">
+        </div>
+    </div>
 </body>
 <script src="main.js"></script>
 </html>

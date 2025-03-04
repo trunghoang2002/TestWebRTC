@@ -18,6 +18,9 @@
     <select id="camera-select"></select>
     <button id="start-camera">Bật Camera</button>
     <button id="stop-camera">Tắt Camera</button>
+    <br/> <br/>
+    <input type="text" id="txtUsername" placeholder="Enter your name" />
+    <button id="signup">Sign up</button>
 
     <br/> <br/>
     <video id="remoteStream" width="300" autoplay playsinline></video>
@@ -25,6 +28,12 @@
     
     <input type="text" id="remote-peer" placeholder="Enter remote peer id" />
     <button id="connect">Connect</button>
+    <br/> <br/>
+
+    <!-- Hiển thị danh sách user online-->
+    <h3>Online Users:</h3>
+    <ul id="listUser"></ul>
+
 </body>
 <script src="main.js"></script>
 </html>

@@ -36,6 +36,17 @@ io.on("connection", (socket) => {
       socket.broadcast.emit("user-disconnected", user);
     }
   });
+
+  socket.on('logout', () => {
+    const index = arrUserInfos.findIndex(e => e.socketId === socket.id);
+    if (index !== -1) {
+        const user = arrUserInfos[index];
+        arrUserInfos.splice(index, 1);
+        console.log("logout: ", user);
+        io.emit("all-user", arrUserInfos);
+        socket.broadcast.emit("user-disconnected", user);
+    }
+  });
 });
 
 httpServer.listen(3000, () => {

@@ -131,21 +131,32 @@ peer.on('call', call => {
     }
 });
 
+// Sự kiện logout
+$('#logout').click(() => {
+    socket.emit('logout');
+    // socket.disconnect();
+    peer.destroy();
+    stopCamera();
+    $('#main').hide();
+    $('#register').show();
+});
+
 // Nhận thông báo từ server
 socket.on('signup-success', () => {
     alert("Đăng kí thành công!");
     $('#register').hide();
     $('#main').show();
+
+    socket.on('new-user', username => {
+        showNotification(`User mới đăng ký: ${username}`);
+        showTitleNotification(`🔔 User mới: ${username}`);
+    });
 });
 
 socket.on('signup-failed', () => {
     alert("Tên người dùng đã tồn tại!");
 });
 
-socket.on('new-user', username => {
-    showNotification(`User mới đăng ký: ${username}`);
-    showTitleNotification(`🔔 User mới: ${username}`);
-});
 
 socket.on('all-user', user => {
     $('#listUser').empty();

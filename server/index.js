@@ -22,7 +22,7 @@ io.on("connection", (socket) => {
     }
     socket.peerId = user.peerId;
     arrUserInfos.push({ ...user, socketId: socket.id });
-    socket.emit("signup-success");
+    socket.emit("signup-success", user.username);
     socket.broadcast.emit("new-user", user.username);
     io.emit("all-user", arrUserInfos);
   });

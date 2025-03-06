@@ -131,6 +131,17 @@ peer.on('call', call => {
     }
 });
 
+// Sự kiện click vào user để gọi video
+$('#listUser').on('click', '.user-item', function () {
+    const Id = $(this).attr('id');
+    if (!localStream) {
+        alert("Vui lòng bật camera trước khi gọi!");
+        return;
+    }
+    const call = peer.call(Id, localStream);
+    call.on('stream', remoteStream => playStream('remoteStream', remoteStream));
+});
+
 // Sự kiện logout
 $('#logout').click(() => {
     socket.emit('logout');
@@ -142,10 +153,12 @@ $('#logout').click(() => {
 });
 
 // Nhận thông báo từ server
-socket.on('signup-success', () => {
+socket.on('signup-success', username => {
     alert("Đăng kí thành công!");
     $('#register').hide();
     $('#main').show();
+    $('#my-username').append(username);
+    $('#txtUsername').val(''); // Reset lại input
 
     socket.on('new-user', username => {
         showNotification(`User mới đăng ký: ${username}`);
@@ -158,10 +171,10 @@ socket.on('signup-failed', () => {
 });
 
 
-socket.on('all-user', user => {
-    $('#listUser').empty();
-    user.forEach(u => {
-        $('#listUser').append(`<li id="${u.peerId}">${u.username} - ${u.peerId}</li>`);
+socket.on('all-user', users => {
+    $('#listUser').empty(); // Xóa danh sách cũ
+    users.forEach(u => {
+        $('#listUser').append(`<button class="user-item" id="${u.peerId}">${u.username}</button>`);
     });
 });
 

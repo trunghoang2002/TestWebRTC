@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebRTC Video Call</title>
+    <link rel="stylesheet" href="style.css">
     <script src="jquery-3.2.1.js"></script>
     <script src="peerjs-1.5.4.min.js"></script>
     <script src="socket.io-4.8.1.js"></script>
@@ -15,6 +16,7 @@
     </div>
 
     <div id="main">
+        <h3 id="my-username">Your Username: </h3>
         <h3 id="my-peer">Your ID: </h3>
         <button id="logout">Logout</button>
         <br/> <br/>
@@ -35,7 +37,7 @@
 
         <!-- Hiển thị danh sách user online-->
         <h3>Online Users:</h3>
-        <ul id="listUser"></ul>
+        <div id="listUser" class="user-list"></div>
         <div id="notification-bar" style="position: fixed; top: 10px; right: 10px; background: #4CAF50; color: white; padding: 10px; border-radius: 5px; display: none;">
         </div>
     </div>

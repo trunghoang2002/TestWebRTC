@@ -142,21 +142,27 @@ socket.on('signup-failed', () => {
     alert("Tên người dùng đã tồn tại!");
 });
 
-socket.on('new-user', user => {
-    showNotification(user.username);
-    showTitleNotification(user.username);
+socket.on('new-user', username => {
+    showNotification(`User mới đăng ký: ${username}`);
+    showTitleNotification(`🔔 User mới: ${username}`);
 });
 
 socket.on('all-user', user => {
     $('#listUser').empty();
     user.forEach(u => {
-        $('#listUser').append(`<li>${u.username} - ${u.peerId}</li>`);
+        $('#listUser').append(`<li id="${u.peerId}">${u.username} - ${u.peerId}</li>`);
     });
 });
 
-function showNotification(username) {
+socket.on('user-disconnected', user => {
+    showNotification(`User ${user.username} đã thoát.`);
+    showTitleNotification(`User ${user.username} đã thoát.`);
+    $(`#${user.peerId}`).remove();
+});
+
+function showNotification(text) {
     const bar = document.getElementById('notification-bar');
-    bar.textContent = `User mới đăng ký: ${username}`;
+    bar.textContent = text;
     bar.style.display = "block";
 
     setTimeout(() => {
@@ -164,8 +170,8 @@ function showNotification(username) {
     }, 3000); // Ẩn sau 3 giây
 }
 
-function showTitleNotification(username) {
-    document.title = `🔔 User mới: ${username}`;
+function showTitleNotification(text) {
+    document.title = text;
     
     setTimeout(() => {
         document.title = "Trang của bạn";  // Reset lại tiêu đề

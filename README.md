@@ -27,7 +27,7 @@ To install all dependencies for this project, follow these steps:
 To run the server, use the following command:
 
 ```sh
-node index
+node server
 ```
 
 This will start the server at `http://localhost:3000`. You can view the project by opening [index.html](https://github.com/trunghoang2002/TestWebRTC/blob/main/index.html) in your browser.

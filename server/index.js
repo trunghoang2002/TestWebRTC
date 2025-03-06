@@ -10,6 +10,7 @@ const io = new Server(httpServer, {
 });
 
 const arrUserInfos = [];
+const userStatus = {}; // Lưu trạng thái của mỗi user { peerId: "idle" | "busy" }
 
 io.on("connection", (socket) => {
   console.log("socket id: ", socket.id);
@@ -22,9 +23,10 @@ io.on("connection", (socket) => {
     }
     socket.peerId = user.peerId;
     arrUserInfos.push({ ...user, socketId: socket.id });
+    userStatus[user.peerId] = "idle";
     socket.emit("signup-success", user.username);
     socket.broadcast.emit("new-user", user.username);
-    io.emit("all-user", arrUserInfos);
+    io.emit("all-user", {users: arrUserInfos, status: userStatus});
   });
 
   socket.on('disconnect', () => {
@@ -32,7 +34,8 @@ io.on("connection", (socket) => {
     if (index !== -1) {
       const user = arrUserInfos[index];
       arrUserInfos.splice(index, 1);
-      io.emit("all-user", arrUserInfos);
+      delete userStatus[user.peerId]; // Xóa trạng thái user
+      io.emit("all-user", {users: arrUserInfos, status: userStatus});
       socket.broadcast.emit("user-disconnected", user);
     }
   });
@@ -42,13 +45,43 @@ io.on("connection", (socket) => {
     if (index !== -1) {
         const user = arrUserInfos[index];
         arrUserInfos.splice(index, 1);
-        console.log("logout: ", user);
-        io.emit("all-user", arrUserInfos);
+        delete userStatus[user.peerId]; // Xóa trạng thái user
+        io.emit("update-user-status", userStatus);
+        io.emit("all-user", {users: arrUserInfos, status: userStatus});
         socket.broadcast.emit("user-disconnected", user);
     }
+});
+
+  // Khi user bắt đầu gọi
+  socket.on("update-status", ({ peerId, status }) => {
+    userStatus[peerId] = status;
+    io.emit("update-user-status", { peerId: peerId, status: status });
+  });
+  
+  socket.on("check-user-status", ({ peerId }, callback) => {
+    if (userStatus[peerId] === "busy") {
+        callback({ status: "busy" });
+    } else {
+        callback({ status: "idle" });
+    }
+});
+
+  // Khi user chấp nhận chuyển cuộc gọi
+  socket.on("switch-call", ({ fromPeerId, oldPeerId, newPeerId }) => {
+    userStatus[oldPeerId] = "idle"; // Giải phóng user cũ
+    userStatus[fromPeerId] = "busy";
+    userStatus[newPeerId] = "busy";
+    io.to(newPeerId).emit("incoming-call", { fromPeerId });
+    // io.emit("update-user-status", userStatus);
+  });
+
+  // Khi user kết thúc cuộc gọi
+  socket.on("end-call", ({ peerId }) => {
+    userStatus[peerId] = "idle";
+    io.emit("update-user-status", { peerId: peerId, status: "idle" });
   });
 });
 
-httpServer.listen(3000, () => {
+httpServer.listen(3000, "0.0.0.0", () => {
   console.log("Server is running on port 3000");
 });

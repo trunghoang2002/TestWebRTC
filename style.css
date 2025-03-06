@@ -5,8 +5,6 @@
 }
 
 .user-item {
-    background-color: #007bff;
-    color: white;
     padding: 8px 15px;
     border: none;
     border-radius: 5px;
@@ -14,6 +12,30 @@
     transition: background 0.3s ease;
 }
 
-.user-item:hover {
+/* Trạng thái rảnh - màu xanh */
+.user-item.idle {
+    background-color: #007bff;
+    color: white;
+}
+
+.user-item.idle:hover {
     background-color: #0056b3;
+}
+
+/* Trạng thái bận - màu đỏ */
+.user-item.busy {
+    background-color: #dc3545;
+    color: white;
+}
+
+.user-item.busy:hover {
+    background-color: #a71d2a;
+}
+
+#call-status {
+    padding: 10px;
+    background: yellow;
+    color: black;
+    text-align: center;
+    font-weight: bold;
 }

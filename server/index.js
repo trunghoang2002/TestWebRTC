@@ -15,6 +15,7 @@ const userStatus = {}; // Lưu trạng thái của mỗi user { peerId: "idle" |
 io.on("connection", (socket) => {
   console.log("socket id: ", socket.id);
 
+  // Khi user đăng ký
   socket.on("signup", user => {
     console.log("signup: ", user);
     const isExist = arrUserInfos.some(e => e.username === user.username);
@@ -26,20 +27,22 @@ io.on("connection", (socket) => {
     userStatus[user.peerId] = "idle";
     socket.emit("signup-success", user.username);
     socket.broadcast.emit("new-user", user.username);
-    io.emit("all-user", {users: arrUserInfos, status: userStatus});
+    io.emit("list-all-user", {users: arrUserInfos, status: userStatus});
   });
 
+  // Khi user ngắt kết nối
   socket.on('disconnect', () => {
     const index = arrUserInfos.findIndex(e => e.peerId === socket.peerId); // có thể tìm kiếm theo socket.id?
     if (index !== -1) {
       const user = arrUserInfos[index];
       arrUserInfos.splice(index, 1);
       delete userStatus[user.peerId]; // Xóa trạng thái user
-      io.emit("all-user", {users: arrUserInfos, status: userStatus});
+      io.emit("list-all-user", {users: arrUserInfos, status: userStatus});
       socket.broadcast.emit("user-disconnected", user);
     }
   });
 
+  // Khi user logout
   socket.on('logout', () => {
     const index = arrUserInfos.findIndex(e => e.socketId === socket.id);
     if (index !== -1) {
@@ -47,32 +50,24 @@ io.on("connection", (socket) => {
         arrUserInfos.splice(index, 1);
         delete userStatus[user.peerId]; // Xóa trạng thái user
         io.emit("update-user-status", userStatus);
-        io.emit("all-user", {users: arrUserInfos, status: userStatus});
+        io.emit("list-all-user", {users: arrUserInfos, status: userStatus});
         socket.broadcast.emit("user-disconnected", user);
     }
 });
 
-  // Khi user bắt đầu gọi
+  // Khi user cập nhật trạng thái
   socket.on("update-status", ({ peerId, status }) => {
     userStatus[peerId] = status;
     io.emit("update-user-status", { peerId: peerId, status: status });
   });
   
+  // Khi user bắt đầu cuộc gọi
   socket.on("check-user-status", ({ peerId }, callback) => {
     if (userStatus[peerId] === "busy") {
         callback({ status: "busy" });
     } else {
         callback({ status: "idle" });
     }
-});
-
-  // Khi user chấp nhận chuyển cuộc gọi
-  socket.on("switch-call", ({ fromPeerId, oldPeerId, newPeerId }) => {
-    userStatus[oldPeerId] = "idle"; // Giải phóng user cũ
-    userStatus[fromPeerId] = "busy";
-    userStatus[newPeerId] = "busy";
-    io.to(newPeerId).emit("incoming-call", { fromPeerId });
-    // io.emit("update-user-status", userStatus);
   });
 
   // Khi user kết thúc cuộc gọi

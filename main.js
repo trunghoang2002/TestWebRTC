@@ -110,36 +110,9 @@ peer.on('open', id => {
     });
 });
 
-// Caller
-$('#connect').click(() => {
-    const Id = $('#remote-peer').val();
-    if (!localStream) {
-        alert("Vui lòng bật camera trước khi gọi!");
-        return;
-    }
-
-    socket.emit("check-user-status", { peerId: Id }, (response) => {
-        if (response.status === "busy") {
-            alert("Người nhận đang bận. Hãy thử lại sau!");
-        } else {
-            socket.emit("update-status", { peerId: peer.id, status: "busy" });
-            startCall(Id);
-        }
-    });
-});
-
-// Gọi cho user khác đang online
-$('#listUser').on('click', '.user-item', function () {
-    const Id = $(this).attr('id');
-    const username = $(this).text();
-
+function processCallResquest(Id) {
     if (Id === peer.id) {
         alert("Không thể gọi cho chính mình!");
-        return;
-    }
-
-    if (!localStream) {
-        alert("Vui lòng bật camera trước khi gọi!");
         return;
     }
 
@@ -148,61 +121,22 @@ $('#listUser').on('click', '.user-item', function () {
         return;
     }
 
-    socket.emit("update-status", { peerId: peer.id, status: "busy" });
-    startCall(Id, username);
-});
-
-// Callee
-peer.on('call', call => {
-    if (!localStream) {
-        startCamera().then(() => {
-            handleIncomingCall(call);
-        });
-    } else {
-        handleIncomingCall(call);
-    }
-});
-
-function handleIncomingCall(call) {
-    const fromPeerId = call.peer;
-
-    if (currentCall) {
-        // Nếu đã có cuộc gọi, hỏi người dùng có muốn chuyển cuộc gọi không
-        console.log("incomming call")
-        const acceptSwitch = confirm(`📞 ${fromPeerId} đang gọi cho bạn. Bạn có muốn chuyển cuộc gọi không?`);
-
-        if (acceptSwitch) {
-            socket.emit("switch-call", { fromPeerId: peer.id, oldPeerId: currentCall.peer, newPeerId: fromPeerId });
-            currentCall.close(); // Kết thúc cuộc gọi cũ
-            socket.emit("update-status", { peerId: peer.id, status: "busy" });
-            acceptCall(call);
+    socket.emit("check-user-status", { peerId: Id }, (response) => {
+        if (response.status === "busy") {
+            alert("Người nhận đang bận. Hãy thử lại sau!");
         } else {
-            socket.emit("end-call", { peerId: peer.id }); // Giữ nguyên cuộc gọi hiện tại
+            socket.emit("update-status", { peerId: peer.id, status: "busy" });
+            if (!localStream) {
+                startCamera().then(() => {
+                    startCall(Id);
+                });    
+            }
+            else {
+                startCall(Id);
+            }
         }
-    } else {
-        // Nếu không có cuộc gọi nào, nhận cuộc gọi bình thường
-        socket.emit("update-status", { peerId: peer.id, status: "busy" });
-        acceptCall(call);
-    }
-}
-
-function acceptCall(call) {
-    call.answer(localStream);
-    currentCall = call;
-
-    username = getUsernamebypeerId(call.peer);
-    $('#call-status').text(`📞 Đang nhận cuộc gọi từ ${username}`).show();
-
-    call.on('stream', remoteStream => {
-        playStream('remoteStream', remoteStream);
-        $('#end-call').show();
-    });
-
-    call.on('close', () => {
-        endCall();
     });
 }
-
 
 function startCall(Id) {
     const call = peer.call(Id, localStream);
@@ -221,10 +155,61 @@ function startCall(Id) {
     });
 }
 
-// Sự kiện kết thúc cuộc gọi
-$('#end-call').click(() => {
-    endCall();
-});
+function handleIncomingCall(call) {
+    const fromPeerId = call.peer;
+    const username = getUsernamebypeerId(fromPeerId);
+    console.log("Incomming call from: ", username);
+
+    if (currentCall) {
+        // Nếu đã có cuộc gọi, hỏi người dùng có muốn chuyển cuộc gọi không
+        const acceptSwitch = confirm(`📞 ${username} đang gọi cho bạn. Bạn có muốn chuyển cuộc gọi không?`);
+
+        if (acceptSwitch) {
+        //     socket.emit("switch-call", { fromPeerId: peer.id, oldPeerId: currentCall.peer, newPeerId: fromPeerId });
+            currentCall.close(); // Kết thúc cuộc gọi cũ
+            socket.emit("update-status", { peerId: peer.id, status: "busy" });
+            if (!localStream) {
+                startCamera().then(() => {
+                    acceptCall(call);
+                });
+            } else {
+                acceptCall(call);
+            }
+        } else {
+            // Giữ nguyên cuộc gọi hiện tại
+        }
+    } else {
+        const accept = confirm(`📞 ${username} đang gọi cho bạn. Chấp nhận không?`);
+        socket.emit("call-response", { fromPeerId: fromPeerId, toPeerId: peer.id, accepted: accept });
+        if (accept) {
+            socket.emit("update-status", { peerId: peer.id, status: "busy" });
+            if (!localStream) {
+                startCamera().then(() => {
+                    acceptCall(call);
+                });
+            } else {
+                acceptCall(call);
+            }
+        }
+    }
+}
+
+function acceptCall(call) {
+    call.answer(localStream);
+    currentCall = call;
+
+    const username = getUsernamebypeerId(call.peer);
+    $('#call-status').text(`📞 Đang nhận cuộc gọi từ ${username}`).show();
+
+    call.on('stream', remoteStream => {
+        playStream('remoteStream', remoteStream);
+        $('#end-call').show();
+    });
+
+    call.on('close', () => {
+        endCall();
+    });
+}
 
 function endCall() {
     if (currentCall) {
@@ -232,6 +217,9 @@ function endCall() {
         currentCall = null;  // Reset biến cuộc gọi
         socket.emit("end-call", { peerId: peer.id }); // Cập nhật trạng thái server
     }
+
+    // Tắt camera
+    stopCamera();
 
     // Ẩn remote video, nút kết thúc cuộc gọi và thông báo trạng thái cuộc gọi
     const remoteVideo = $('#remoteStream').get(0);
@@ -241,6 +229,28 @@ function endCall() {
     $('#end-call').hide();
     $('#call-status').hide();
 }
+
+// Caller
+$('#connect').click(() => {
+    const Id = $('#remote-peer').val();
+    processCallResquest(Id);
+});
+
+// Gọi cho user khác đang online
+$('#listUser').on('click', '.user-item', function () {
+    const Id = $(this).attr('id');
+    processCallResquest(Id);
+});
+
+// Callee
+peer.on('call', call => {
+    handleIncomingCall(call);
+});
+
+// Sự kiện kết thúc cuộc gọi
+$('#end-call').click(() => {
+    endCall();
+});
 
 // Sự kiện logout
 $('#logout').click(() => {
@@ -270,14 +280,13 @@ socket.on('signup-failed', () => {
     alert("Tên người dùng đã tồn tại!");
 });
 
-
-socket.on('all-user', (data) => {
+socket.on('list-all-user', (data) => {
     $('#listUser').empty(); // Xóa danh sách cũ
     userInfos = data.users;
     userStatus = data.status;
     userInfos.forEach(u => {
         const isBusy = userStatus[u.peerId] === "busy";
-        console.log(u.username, ": ", isBusy);
+        console.log(u.username, " is busy or not: ", isBusy);
         $('#listUser').append(`<button class="user-item ${isBusy ? 'busy' : 'idle'}" id="${u.peerId}">${u.username}</button>`);
     });
 });
@@ -292,23 +301,6 @@ socket.on('update-user-status', (data) => {
     id = data.peerId;
     stat = data.status;
     $('#listUser').find(`#${id}`).removeClass('busy idle').addClass(stat);
-});
-
-socket.on("incoming-call", ({ fromPeerId }) => {
-    const acceptCall = confirm(`${fromPeerId} đang gọi cho bạn. Bạn có muốn nhận cuộc gọi không?`);
-    
-    if (acceptCall) {
-        if (currentCall) {
-            // Nếu đang trong cuộc gọi, kết thúc cuộc gọi cũ trước
-            socket.emit("switch-call", { fromPeerId: peer.id, oldPeerId: currentCall.peer, newPeerId: fromPeerId });
-            currentCall.close(); // Kết thúc cuộc gọi với user B
-        }
-        
-        // Bắt đầu cuộc gọi với user C
-        startCall(fromPeerId);
-    } else {
-        socket.emit("end-call", { peerId: peer.id }); // Không nhận, user vẫn rảnh
-    }
 });
 
 function showNotification(text) {

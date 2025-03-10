@@ -2,6 +2,9 @@ const socket = io('http://localhost:3000');
 let localStream = null;
 let selectedDeviceId = null; // ID của camera được chọn
 let currentCall = null;
+let isUsingFile = false;
+let videoFile = null;
+let isPaused = false;
 
 $('#notification-bar').hide();
 $('#main').hide();
@@ -66,7 +69,7 @@ async function startCamera() {
     }
 
     if (localStream) {
-        stopCamera(); // Tắt camera trước khi bật camera mới
+        stopCameraAndVideo(); // Tắt camera trước khi bật camera mới
     }
 
     try {
@@ -79,11 +82,15 @@ async function startCamera() {
 }
 
 // Tắt camera
-function stopCamera() {
+function stopCameraAndVideo() {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         document.getElementById('localStream').srcObject = null;
         localStream = null;
+    }
+    if (isUsingFile) {
+        document.getElementById('localStream').src = "";
+        isUsingFile = false;
     }
 }
 
@@ -95,9 +102,15 @@ loadCameraList().then(deviceId => {
 });
 
 
-// Sự kiện bấm nút bật/tắt camera
-document.getElementById('start-camera').addEventListener('click', startCamera);
-document.getElementById('stop-camera').addEventListener('click', stopCamera);
+// Bật camera
+$('#start-camera').click(() => {
+    isUsingFile = false;
+    startCamera();
+});
+// Tắt camera
+$('#stop-camera').click(() => {
+    stopCameraAndVideo();
+});
 
 // Khởi tạo PeerJS
 var peer = new Peer();
@@ -138,7 +151,7 @@ function handleStartCall(Id) {
     // });
 
     socket.emit("update-status", { peerId: peer.id, status: "busy" });
-    if (!localStream) {
+    if (!localStream && !isUsingFile) {
         startCamera().then(() => {
             startCall(Id);
         });    
@@ -149,7 +162,8 @@ function handleStartCall(Id) {
 }
 
 function startCall(Id) {
-    const call = peer.call(Id, localStream);
+    let streamToSend = isUsingFile ? document.getElementById('localStream').captureStream() : localStream;
+    const call = peer.call(Id, streamToSend);
     currentCall = call;
     console.log("currentCall: ", currentCall);
 
@@ -179,7 +193,7 @@ function handleIncomingCall(call) {
         if (acceptSwitch) {
             currentCall.close(); // Kết thúc cuộc gọi cũ
             socket.emit("update-status", { peerId: peer.id, status: "busy" });
-            if (!localStream) {
+            if (!localStream && !isUsingFile) {
                 startCamera().then(() => {
                     acceptCall(call);
                 });
@@ -197,7 +211,7 @@ function handleIncomingCall(call) {
         const accept = confirm(`📞 ${username} đang gọi cho bạn. Chấp nhận không?`);
         if (accept) {
             socket.emit("update-status", { peerId: peer.id, status: "busy" });
-            if (!localStream) {
+             if (!localStream && !isUsingFile) {
                 startCamera().then(() => {
                     acceptCall(call);
                 });
@@ -216,7 +230,8 @@ function handleIncomingCall(call) {
 }
 
 function acceptCall(call) {
-    call.answer(localStream);
+    let streamToSend = isUsingFile ? document.getElementById('localStream').captureStream() : localStream;
+    call.answer(streamToSend);
     currentCall = call;
 
     const username = getUsernamebypeerId(call.peer);
@@ -241,7 +256,7 @@ function endCall() {
     }
 
     // Tắt camera
-    stopCamera();
+    stopCameraAndVideo();
 
     // Ẩn remote video, nút kết thúc cuộc gọi và thông báo trạng thái cuộc gọi
     const remoteVideo = $('#remoteStream').get(0);
@@ -251,6 +266,47 @@ function endCall() {
     $('#end-call').hide();
     $('#call-status').hide();
 }
+
+// Xử lý tải video từ file
+$('#video-upload').change((event) => {
+    videoFile = event.target.files[0];
+    if (videoFile) {
+        $('#start-video').show();
+    }
+});
+
+// Bắt đầu phát video từ file
+$('#start-video').click(() => {
+    if (!videoFile) return;
+    $('#pause-video').show();
+
+    const videoElement = document.getElementById('localStream');
+    if (!isUsingFile) {
+        // Nếu chưa phát, tạo stream và play
+        const objectURL = URL.createObjectURL(videoFile);
+        videoElement.src = objectURL;
+        videoElement.play();
+        isUsingFile = true;
+
+        //Tạo stream từ video file
+        videoElement.onloadeddata = () => {
+            localStream = videoElement.captureStream();
+        };
+    } else if (isPaused) {
+        // Nếu đang tạm dừng, tiếp tục phát
+        videoElement.play();
+    }
+
+    isPaused = false;
+});
+
+// Dừng phát video từ file
+$('#pause-video').click(() => {
+    const videoElement = document.getElementById('localStream');
+    videoElement.pause();
+    isPaused = true;
+    $('#pause-video').hide();
+});
 
 // Caller
 $('#connect').click(() => {
@@ -291,7 +347,7 @@ $('#logout').click(() => {
     socket.emit('logout');
     // socket.disconnect();
     peer.destroy();
-    stopCamera();
+    stopCameraAndVideo();
     $('#main').hide();
     $('#register').show();
 });

@@ -61,14 +61,14 @@ io.on("connection", (socket) => {
     io.emit("update-user-status", { peerId: peerId, status: status });
   });
   
-  // Khi user bắt đầu cuộc gọi
-  socket.on("check-user-status", ({ peerId }, callback) => {
-    if (userStatus[peerId] === "busy") {
-        callback({ status: "busy" });
-    } else {
-        callback({ status: "idle" });
-    }
-  });
+  // // Khi user bắt đầu cuộc gọi
+  // socket.on("check-user-status", ({ peerId }, callback) => {
+  //   if (userStatus[peerId] === "busy") {
+  //       callback({ status: "busy" });
+  //   } else {
+  //       callback({ status: "idle" });
+  //   }
+  // });
 
   // Khi user kết thúc cuộc gọi
   socket.on("end-call", ({ peerId }) => {

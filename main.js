@@ -110,7 +110,7 @@ peer.on('open', id => {
     });
 });
 
-function processCallResquest(Id) {
+function handleStartCall(Id) {
     if (Id === peer.id) {
         alert("Không thể gọi cho chính mình!");
         return;
@@ -121,26 +121,37 @@ function processCallResquest(Id) {
         return;
     }
 
-    socket.emit("check-user-status", { peerId: Id }, (response) => {
-        if (response.status === "busy") {
-            alert("Người nhận đang bận. Hãy thử lại sau!");
-        } else {
-            socket.emit("update-status", { peerId: peer.id, status: "busy" });
-            if (!localStream) {
-                startCamera().then(() => {
-                    startCall(Id);
-                });    
-            }
-            else {
-                startCall(Id);
-            }
-        }
-    });
+    // socket.emit("check-user-status", { peerId: Id }, (response) => {
+    //     if (response.status === "busy") {
+    //         alert("Người nhận đang bận. Hãy thử lại sau!");
+    //     } else {
+    //         socket.emit("update-status", { peerId: peer.id, status: "busy" });
+    //         if (!localStream) {
+    //             startCamera().then(() => {
+    //                 startCall(Id);
+    //             });    
+    //         }
+    //         else {
+    //             startCall(Id);
+    //         }
+    //     }
+    // });
+
+    socket.emit("update-status", { peerId: peer.id, status: "busy" });
+    if (!localStream) {
+        startCamera().then(() => {
+            startCall(Id);
+        });    
+    }
+    else {
+        startCall(Id);
+    }
 }
 
 function startCall(Id) {
     const call = peer.call(Id, localStream);
     currentCall = call;
+    console.log("currentCall: ", currentCall);
 
     username = getUsernamebypeerId(Id);
     $('#call-status').text(`📞 Đang gọi ${username}...`).show();
@@ -151,6 +162,7 @@ function startCall(Id) {
     });
 
     call.on('close', () => {
+        console.log("end call with ", username)
         endCall();
     });
 }
@@ -165,7 +177,6 @@ function handleIncomingCall(call) {
         const acceptSwitch = confirm(`📞 ${username} đang gọi cho bạn. Bạn có muốn chuyển cuộc gọi không?`);
 
         if (acceptSwitch) {
-        //     socket.emit("switch-call", { fromPeerId: peer.id, oldPeerId: currentCall.peer, newPeerId: fromPeerId });
             currentCall.close(); // Kết thúc cuộc gọi cũ
             socket.emit("update-status", { peerId: peer.id, status: "busy" });
             if (!localStream) {
@@ -176,11 +187,14 @@ function handleIncomingCall(call) {
                 acceptCall(call);
             }
         } else {
-            // Giữ nguyên cuộc gọi hiện tại
+            // Gửi thông báo từ chối qua PeerJS Data Connection
+            const conn = peer.connect(fromPeerId);
+            conn.on('open', () => {
+                conn.send({ type: "call-rejected", message: "Người nhận đang bận và từ chối cuộc gọi." });
+            });
         }
     } else {
         const accept = confirm(`📞 ${username} đang gọi cho bạn. Chấp nhận không?`);
-        socket.emit("call-response", { fromPeerId: fromPeerId, toPeerId: peer.id, accepted: accept });
         if (accept) {
             socket.emit("update-status", { peerId: peer.id, status: "busy" });
             if (!localStream) {
@@ -190,6 +204,13 @@ function handleIncomingCall(call) {
             } else {
                 acceptCall(call);
             }
+        }
+        else {
+            // Gửi thông báo từ chối qua PeerJS Data Connection
+            const conn = peer.connect(fromPeerId);
+            conn.on('open', () => {
+                conn.send({ type: "call-rejected", message: "Người nhận đang bận và từ chối cuộc gọi." });
+            });
         }
     }
 }
@@ -207,6 +228,7 @@ function acceptCall(call) {
     });
 
     call.on('close', () => {
+        console.log("end call with ", username)
         endCall();
     });
 }
@@ -233,13 +255,13 @@ function endCall() {
 // Caller
 $('#connect').click(() => {
     const Id = $('#remote-peer').val();
-    processCallResquest(Id);
+    handleStartCall(Id);
 });
 
 // Gọi cho user khác đang online
 $('#listUser').on('click', '.user-item', function () {
     const Id = $(this).attr('id');
-    processCallResquest(Id);
+    handleStartCall(Id);
 });
 
 // Callee
@@ -249,7 +271,19 @@ peer.on('call', call => {
 
 // Sự kiện kết thúc cuộc gọi
 $('#end-call').click(() => {
+    username = getUsernamebypeerId(currentCall.peer);
+    console.log("end call with ", username)
     endCall();
+});
+
+// Sự kiện nhận thông báo khi người dùng từ chối cuộc gọi
+peer.on('connection', conn => {
+    conn.on('data', data => {
+        if (data.type === "call-rejected") {
+            endCall();
+            alert(data.message);
+        }
+    });
 });
 
 // Sự kiện logout

@@ -1,4 +1,5 @@
-const socket = io('http://localhost:3000');
+// const socket = io('http://localhost:3000');
+const socket = io('https://vast-alien-obviously.ngrok-free.app/');
 let localStream = null;
 let selectedDeviceId = null; // ID của camera được chọn
 let currentCall = null;

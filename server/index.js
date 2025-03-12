@@ -1,4 +1,6 @@
 import { createServer } from "http";
+// import { createServer } from "https";
+// import { readFileSync } from "fs";
 import { Server } from "socket.io";
 
 const httpServer = createServer();
@@ -8,6 +10,18 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"] // Allowed HTTP methods
   }
 });
+// const options = {
+//   key: readFileSync("key.pem"),
+//   cert: readFileSync("cert.pem")
+// };
+
+// const httpsServer = createServer(options);
+// const io = new Server(httpsServer, {
+//   cors: {
+//     origin: "*",
+//     methods: ["GET", "POST"]
+//   }
+// });
 
 const arrUserInfos = [];
 const userStatus = {}; // Lưu trạng thái của mỗi user { peerId: "idle" | "busy" }
@@ -78,5 +92,8 @@ io.on("connection", (socket) => {
 });
 
 httpServer.listen(3000, "0.0.0.0", () => {
-  console.log("Server is running on port 3000");
+  console.log("HTTP Server is running on port 3000");
 });
+// httpsServer.listen(3000, () => {
+//   console.log("HTTPS Server is running on port 3000");
+// });

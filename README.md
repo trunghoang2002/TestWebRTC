@@ -30,4 +30,5 @@ To run the server, use the following command:
 node server/index.js
 ```
 
-This will start the server at `http://localhost:3000`. You can view the project by opening [index.html](https://github.com/trunghoang2002/TestWebRTC/blob/main/index.html) in your browser.
+This will start the server at `http://localhost:3000`. 
+You can view the demo by at [index.html](https://trunghoang2002.github.io/TestWebRTC/client/templates/index_ws.html).

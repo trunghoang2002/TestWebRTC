@@ -1,5 +1,5 @@
 // const ws = new WebSocket('ws://localhost:3000');
-const ws = new WebSocket('ws://vast-alien-obviously.ngrok-free.app');
+const ws = new WebSocket('wss://vast-alien-obviously.ngrok-free.app'); // ngrok http --url=vast-alien-obviously.ngrok-free.app 3000
 ws.onopen = () => {
     console.log("WebSocket connected");
 };

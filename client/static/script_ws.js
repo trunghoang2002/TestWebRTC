@@ -1,5 +1,8 @@
-const socket = io('http://localhost:3000');
-// const socket = io('https://localhost:3000');
+// const ws = new WebSocket('ws://localhost:3000');
+const ws = new WebSocket('ws://vast-alien-obviously.ngrok-free.app');
+ws.onopen = () => {
+    console.log("WebSocket connected");
+};
 let localStream = null;
 let selectedDeviceId = null; // ID của camera được chọn
 let currentCall = null;
@@ -120,7 +123,8 @@ peer.on('open', id => {
     // Đăng kí user
     $('#signup').click(() => {
         const username = $('#txtUsername').val();
-        socket.emit('signup', { username: username, peerId: id });
+        console.log(`name: ${username}, id: ${id}`);
+        ws.send(JSON.stringify({ type: 'signup', username: username, peerId: id  }));
     });
 });
 
@@ -135,23 +139,7 @@ function handleStartCall(Id) {
         return;
     }
 
-    // socket.emit("check-user-status", { peerId: Id }, (response) => {
-    //     if (response.status === "busy") {
-    //         alert("Người nhận đang bận. Hãy thử lại sau!");
-    //     } else {
-    //         socket.emit("update-status", { peerId: peer.id, status: "busy" });
-    //         if (!localStream) {
-    //             startCamera().then(() => {
-    //                 startCall(Id);
-    //             });    
-    //         }
-    //         else {
-    //             startCall(Id);
-    //         }
-    //     }
-    // });
-
-    socket.emit("update-status", { peerId: peer.id, status: "busy" });
+    ws.send(JSON.stringify({ type: 'update-status', peerId: peer.id, status: "busy" }));
     if (!localStream && !isUsingFile) {
         startCamera().then(() => {
             startCall(Id);
@@ -193,7 +181,7 @@ function handleIncomingCall(call) {
 
         if (acceptSwitch) {
             currentCall.close(); // Kết thúc cuộc gọi cũ
-            socket.emit("update-status", { peerId: peer.id, status: "busy" });
+            ws.send(JSON.stringify({ type: 'update-status', peerId: peer.id, status: "busy" }));
             if (!localStream && !isUsingFile) {
                 startCamera().then(() => {
                     acceptCall(call);
@@ -211,7 +199,7 @@ function handleIncomingCall(call) {
     } else {
         const accept = confirm(`📞 ${username} đang gọi cho bạn. Chấp nhận không?`);
         if (accept) {
-            socket.emit("update-status", { peerId: peer.id, status: "busy" });
+            ws.send(JSON.stringify({ type: 'update-status', peerId: peer.id, status: "busy" }));
              if (!localStream && !isUsingFile) {
                 startCamera().then(() => {
                     acceptCall(call);
@@ -253,7 +241,7 @@ function endCall() {
     if (currentCall) {
         currentCall.close(); // Đóng cuộc gọi
         currentCall = null;  // Reset biến cuộc gọi
-        socket.emit("end-call", { peerId: peer.id }); // Cập nhật trạng thái server
+        ws.send(JSON.stringify({ type: 'end-call', peerId: peer.id })); // Cập nhật trạng thái server
     }
 
     // Tắt camera
@@ -345,8 +333,7 @@ peer.on('connection', conn => {
 
 // Sự kiện logout
 $('#logout').click(() => {
-    socket.emit('logout');
-    // socket.disconnect();
+    ws.send(JSON.stringify({ type: 'logout' }));
     peer.destroy();
     stopCameraAndVideo();
     $('#main').hide();
@@ -354,45 +341,41 @@ $('#logout').click(() => {
 });
 
 // Nhận thông báo từ server
-socket.on('signup-success', username => {
-    alert("Đăng kí thành công!");
-    $('#register').hide();
-    $('#main').show();
-    $('#my-username').append(username);
-    $('#txtUsername').val(''); // Reset lại input
-
-    socket.on('new-user', username => {
-        showNotification(`User mới đăng ký: ${username}`);
-        showTitleNotification(`🔔 User mới: ${username}`);
-    });
-});
-
-socket.on('signup-failed', () => {
-    alert("Tên người dùng đã tồn tại!");
-});
-
-socket.on('list-all-user', (data) => {
-    $('#listUser').empty(); // Xóa danh sách cũ
-    userInfos = data.users;
-    userStatus = data.status;
-    userInfos.forEach(u => {
-        const isBusy = userStatus[u.peerId] === "busy";
-        console.log(u.username, " is busy or not: ", isBusy);
-        $('#listUser').append(`<button class="user-item ${isBusy ? 'busy' : 'idle'}" id="${u.peerId}">${u.username}</button>`);
-    });
-});
-
-socket.on('user-disconnected', user => {
-    showNotification(`User ${user.username} đã thoát.`);
-    showTitleNotification(`User ${user.username} đã thoát.`);
-    $(`#${user.peerId}`).remove();
-});
-
-socket.on('update-user-status', (data) => {
-    id = data.peerId;
-    stat = data.status;
-    $('#listUser').find(`#${id}`).removeClass('busy idle').addClass(stat);
-});
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    switch (data.type) {
+        case 'signup-success':
+            alert("Đăng kí thành công!");
+            $('#register').hide();
+            $('#main').show();
+            $('#my-username').append(data.username);
+            $('#txtUsername').val(''); // Reset lại input
+            break;
+        case 'signup-failed':
+            alert("Tên người dùng đã tồn tại!");
+            break;
+        case 'new-user':
+            showNotification(`User mới đăng ký: ${data.username}`);
+            showTitleNotification(`🔔 User mới: ${data.username}`);
+            break;
+        case 'list-all-user':
+            $('#listUser').empty(); // Xóa danh sách cũ
+            data.users.forEach(u => {
+                const isBusy = data.status[u.peerId] === "busy";
+                console.log(u.username, " is busy or not: ", isBusy);
+                $('#listUser').append(`<button class="user-item ${isBusy ? 'busy' : 'idle'}" id="${u.peerId}">${u.username}</button>`);
+            });
+            break;
+        case 'user-disconnected':
+            showNotification(`User ${user.username} đã thoát.`);
+            showTitleNotification(`User ${user.username} đã thoát.`);
+            $(`#${user.peerId}`).remove();
+            break;
+        case 'update-user-status':
+            $(`#${data.peerId}`).removeClass('busy idle').addClass(data.status);
+            break;
+    }
+};
 
 function showNotification(text) {
     const bar = document.getElementById('notification-bar');
